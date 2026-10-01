@@ -1,20 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind v4: o theme só é importado via @import "tailwindcss" (não use diretivas @tailwind v3). */
+@import "tailwindcss";
 
-/* Adicionando as novas fontes ao Tailwind */
-@layer base {
-  h1, h2, h3 {
-    font-family: var(--font-cinzel), serif;
-  }
-  body, p, span, div {
-    font-family: var(--font-spectral), serif;
-  }
-}
-
-body {
-  margin: 0;
-  padding: 0;
-  background-color: black;
-  overflow: hidden;
-}
+body { margin: 0; padding: 0; background: black; overflow: hidden; }

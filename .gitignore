@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# scaffold duplicado (não é a raiz da aplicação — não versionar)
+/portfolio-seo/
+
+# documentação interna de contexto (repositório é público — manter local)
+/CONTEXTO_PROJETO.md
+
+# arquivos temporários de validação
+._*

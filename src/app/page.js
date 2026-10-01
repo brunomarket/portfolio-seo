@@ -17,21 +17,9 @@ export default function LibraryPage() {
   const [activeProject, setActiveProject] = useState(null);
 
   const fillerBooks = [
-    // --- LADO ESQUERDO ---
-    
-    // f1 (O problemático): 
-    // Movi para X = -1.9 (Mais para esquerda)
-    // Rotação Y = 0 (Totalmente Vertical)
-    // Altura corrigida para chão (-0.025)
     { id: 'f1', pos: [-1.9, -0.025, 0], rot: [0, 0, 0], color: '#3e2723', size: [0.15, 0.95, 0.8] },
-    
-    // f2: Mantive em -1.65 (Dando um respiro de 0.25 de distância)
     { id: 'f2', pos: [-1.65, -0.075, 0], rot: [0, 0, 0], color: '#1a237e', size: [0.12, 0.85, 0.75] },
-    
-    // f3: Inclinado levemente
     { id: 'f3', pos: [-1.45, 0, 0], rot: [0, 0.1, 0], color: '#004d40', size: [0.18, 1.0, 0.8] },
-    
-    // --- LADO DIREITO ---
     { id: 'f4', pos: [1.2, -0.05, 0],  rot: [0, -0.1, 0], color: '#4a148c', size: [0.14, 0.9, 0.78] },
     { id: 'f5', pos: [1.4, -0.04, 0],  rot: [0, 0, -0.05], color: '#b71c1c', size: [0.16, 0.92, 0.8] },
     { id: 'f6', pos: [1.6, -0.2, 0],  rot: [0, 0, 0.4],  color: '#212121', size: [0.12, 0.8, 0.7] },
@@ -50,18 +38,11 @@ export default function LibraryPage() {
           <group position={[0, -0.2, 0]}>
             <Bookshelf />
 
-            {/* === O PATINHO === */}
-            {/* Rotação ajustada:
-                Antes: 0.8
-                Agora: 0.8 + Math.PI (3.94) -> Vira 180 graus
-                Isso deve fazer ele olhar para a frente/câmera agora.
-            */}
             <RubberDuck 
               position={[-2.2, -0.5, -0.2]} 
               rotation={[0, 0.8 + Math.PI, 0]} 
             />
 
-            {/* === LIVROS DECORATIVOS === */}
             {fillerBooks.map((book) => (
               <FillerBook 
                 key={book.id}
@@ -72,7 +53,6 @@ export default function LibraryPage() {
               />
             ))}
 
-            {/* === PROJETOS REAIS === */}
             <group position={[-((projects.length * 0.2) / 2) + 0.1, 0, 0]}>
               {projects.map((project, index) => (
                 <Book 
