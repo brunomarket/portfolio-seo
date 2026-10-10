@@ -60,7 +60,7 @@ export function Bookshelf(props) {
           outlineWidth={0.01}
           outlineColor="#000000"
         >
-          H2 Grupo
+          Grupo H2
         </Text>
 
         <mesh position={[-0.55, 0, 0.03]}>

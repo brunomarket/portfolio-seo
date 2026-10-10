@@ -14,6 +14,10 @@ export function FlickeringLight({ position, color = '#ff8f34', intensity = 2, ..
     }
   });
 
+  // A "vela" continua sendo a fonte de sombra principal, mas com shadow map
+  // cúbico 1024² (padrão = 512²) e normalBias + near/far apertados: eliminam
+  // o acne de sombra (manchas/glitchs pretos nos modelos) que ficava visível
+  // quando a câmera se afasta (zoom reduzido), especialmente em GPU mobile.
   return (
     <group position={position}>
       <pointLight
@@ -22,6 +26,10 @@ export function FlickeringLight({ position, color = '#ff8f34', intensity = 2, ..
         distance={10}
         decay={2}
         castShadow
+        shadow-mapSize={[1024, 1024]}
+        shadow-normalBias={0.05}
+        shadow-camera-near={0.05}
+        shadow-camera-far={12}
         {...props}
       />
     </group>

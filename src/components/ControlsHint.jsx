@@ -107,7 +107,9 @@ export function ControlsHint() {
   ];
 
   return (
-    <div className="fixed bottom-4 left-4 z-10 pointer-events-none font-serif select-none">
+    // pointer-coarse:hidden — escondido em celular/tablet (ponteiro "coarse"):
+    // os comandos listados são de mouse/teclado, inúteis no toque.
+    <div className="fixed bottom-4 left-4 z-10 pointer-events-none font-serif select-none pointer-coarse:hidden">
       <div className="relative border border-[#d0c09a] bg-[#fdf6e3]/90 px-4 py-3 shadow-[0_2px_10px_rgba(0,0,0,0.45)]">
         <div className="absolute inset-[3px] border border-[#d0c09a] opacity-50"></div>
         <div className="relative">

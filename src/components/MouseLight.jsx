@@ -15,6 +15,10 @@ export function MouseLight() {
     }
   });
 
+  // Sem castShadow: uma point light MOVEL com sombra cúbica (6 shadow maps por
+  // frame) era a principal fonte dos "glitchs pretos" (acne de sombra) que
+  // apareciam nos modelos quando o zoom é reduzido, sobretudo em GPU mobile.
+  // A luz continua como acento quente que segue o mouse — só não projeta sombra.
   return (
     <pointLight
       ref={lightRef}
@@ -23,7 +27,6 @@ export function MouseLight() {
       intensity={2}  
       color="#ffaa55"
       position={[0, 0, 2]}
-      castShadow     
     />
   );
 }
