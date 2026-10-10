@@ -84,7 +84,14 @@ export function ProjectOverlay({ activeProject, onClose }) {
                     </div>
 
                     <div className="flex-1 overflow-y-auto custom-scrollbar text-left px-2">
-                        <p className="first-letter:text-3xl first-letter:font-bold first-letter:text-[#8b0000] first-letter:mr-1 first-letter:float-left text-sm md:text-base leading-relaxed font-serif opacity-90 mb-6 pr-2">
+                        {/* Texto de conteúdo: Literata (font-literata); demais
+                            textos (títulos, rótulos, rodapé) mantêm o serif padrão.
+                            Capitular ocupa exatamente 2 linhas: line-height = 2×
+                            a linha do parágrafo (leading-relaxed: 26px em md → 52;
+                            22,75px base → 45,5) e font-size ≈ linha/0,87 para a
+                            baseline cair na base da 2ª linha (métricas Literata:
+                            cap 0,70em, asc 1,18, desc 0,31). */}
+                        <p className="first-letter:text-[52px] first-letter:leading-[45.5px] md:first-letter:text-[60px] md:first-letter:leading-[52px] first-letter:font-bold first-letter:text-[#8b0000] first-letter:mr-1 first-letter:float-left text-sm md:text-base leading-relaxed font-literata opacity-90 mb-6 pr-2">
                             {activeProject.description}
                         </p>
 

@@ -8,9 +8,34 @@ import { useMemo, useRef, useState } from 'react';
 // Eixo X: intervalos mês a mês com detalhamento dia a dia (cada dia é um ponto).
 // Topo: cards com as ESTATÍSTICAS DE PICO do período plotado
 //       (os totais ficam nos cards big number do bloco "Resultados").
+// Seletor de MÉDIA MÓVEL acima do gráfico: Diário / 7d / 14d / 30d.
+//   - Diário: um ponto por dia (série bruta).
+//   - N dias: a série vira média móvel (trailing) e é PLOTADA COM UM PONTO A
+//     CADA N DIAS (cadência 0, N, 2N... + último dia) — menos pontos no eixo,
+//     ticks de dia também ficam só nos pontos plotados (marcos de mês mantidos).
+//   - Eixo, picos e valores do tooltip continuam BRUTOS (estatísticas do
+//     período); a linha da média no tooltip mostra o valor do ponto plotado.
 // ----------------------------------------------------------------------------
 
 const MONTHS_PT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+
+// Opções do seletor de média móvel (0 = série diária bruta)
+const MA_OPTIONS = [
+  { value: 0, label: 'Diário' },
+  { value: 7, label: '7d' },
+  { value: 14, label: '14d' },
+  { value: 30, label: '30d' },
+];
+
+// Média móvel "trailing": cada ponto = média dos últimos `win` dias
+// (incluindo o dia atual; no início da série, média dos disponíveis).
+const movingAverage = (values, win) =>
+  values.map((_, i) => {
+    const from = Math.max(0, i - win + 1);
+    let sum = 0;
+    for (let j = from; j <= i; j++) sum += values[j];
+    return sum / (i - from + 1);
+  });
 
 const W = 460;
 const H = 280;
@@ -24,8 +49,9 @@ const CARD_H = 42;
 const CARD_W = 196;
 const CARD_X = [30, 234];
 
-const TIP_W = 122;
-const TIP_H = 56;
+const TIP_W = 177; // 122 × 1,45 → card de inspeção +45%
+const TIP_H = 81;  // 56 × 1,45 (modo diário)
+const TIP_H_MA = 97; // modo média: +1 linha (valor do ponto plotado)
 
 const parseDate = (iso) => {
   const [year, month, day] = iso.split('-').map(Number);
@@ -43,6 +69,7 @@ const formatTotal = (value) => value.toLocaleString('pt-BR');
 export function GrowthChart({ data, fromDate, toDate }) {
   const svgRef = useRef(null);
   const [hoverIndex, setHoverIndex] = useState(null);
+  const [maWindow, setMaWindow] = useState(0); // 0 = diário; N = janela/cadência
 
   const model = useMemo(() => {
     if (!data || data.length < 2) return null;
@@ -55,7 +82,23 @@ export function GrowthChart({ data, fromDate, toDate }) {
 
     const n = series.length;
 
-    // Picos do período plotado (estatísticas de pico nos cards do topo)
+    // Série diária bruta (eixo, picos e tooltip) vs valores da LINHA
+    // (brutos no modo "Diário" ou média móvel na janela escolhida)
+    const rawClicks = series.map((r) => r.clicks || 0);
+    const rawImpr = series.map((r) => r.impressions || 0);
+    const clicksVals = maWindow > 0 ? movingAverage(rawClicks, maWindow) : rawClicks;
+    const imprVals = maWindow > 0 ? movingAverage(rawImpr, maWindow) : rawImpr;
+
+    // Índices PLOTADOS: diário = todos os dias; média = um ponto a cada N dias
+    // (cadência estrita 0, N, 2N... + o último dia, para o gráfico terminar
+    // sempre na data mais recente)
+    const step = maWindow > 0 ? maWindow : 1;
+    const plotIdx = [];
+    for (let i = 0; i < n; i += step) plotIdx.push(i);
+    if (plotIdx[plotIdx.length - 1] !== n - 1) plotIdx.push(n - 1);
+    const plotSet = new Set(plotIdx);
+
+    // Picos do período plotado (estatísticas de pico nos cards do topo — brutas)
     const peakClicks = Math.max(...series.map((r) => r.clicks || 0));
     const peakImpressions = Math.max(...series.map((r) => r.impressions || 0));
 
@@ -75,12 +118,13 @@ export function GrowthChart({ data, fromDate, toDate }) {
     const yClicks = (v) => PAD.t + INNER_H - (v / clicksTop) * INNER_H;
     const yImpr = (v) => PAD.t + INNER_H - (v / imprTop) * INNER_H;
 
+    // Linhas ligam APENAS os pontos plotados (1 por dia ou 1 a cada N dias)
     let clicksPath = '';
     let imprPath = '';
-    series.forEach((row, i) => {
+    plotIdx.forEach((i, k) => {
       const x = xAt(i).toFixed(2);
-      clicksPath += `${i === 0 ? 'M' : 'L'}${x},${yClicks(row.clicks || 0).toFixed(2)} `;
-      imprPath += `${i === 0 ? 'M' : 'L'}${x},${yImpr(row.impressions || 0).toFixed(2)} `;
+      clicksPath += `${k === 0 ? 'M' : 'L'}${x},${yClicks(clicksVals[i]).toFixed(2)} `;
+      imprPath += `${k === 0 ? 'M' : 'L'}${x},${yImpr(imprVals[i]).toFixed(2)} `;
     });
 
     // Agrupamento dia a dia -> faixas mês a mês para o eixo
@@ -99,6 +143,10 @@ export function GrowthChart({ data, fromDate, toDate }) {
     return {
       n,
       series,
+      clicksVals,
+      imprVals,
+      plotIdx,
+      plotSet,
       peakClicks,
       peakImpressions,
       clicksTop,
@@ -112,7 +160,7 @@ export function GrowthChart({ data, fromDate, toDate }) {
       imprPath,
       months,
     };
-  }, [data, fromDate, toDate]);
+  }, [data, fromDate, toDate, maWindow]);
 
   if (!model) return null;
 
@@ -123,30 +171,66 @@ export function GrowthChart({ data, fromDate, toDate }) {
     const rect = svgRef.current.getBoundingClientRect();
     const svgX = ((event.clientX - rect.left) / rect.width) * W;
     const ratio = (svgX - PAD.l) / INNER_W;
-    const idx = Math.round(ratio * (model.n - 1));
-    setHoverIndex(Math.min(model.n - 1, Math.max(0, idx)));
+    const rawIdx = Math.round(ratio * (model.n - 1));
+    // O hover "encaixa" no PONTO PLOTADO mais próximo (a linha só existe lá)
+    const idx = model.plotIdx.reduce(
+      (best, i) => (Math.abs(i - rawIdx) < Math.abs(best - rawIdx) ? i : best),
+      model.plotIdx[0]
+    );
+    setHoverIndex(idx);
   };
 
   let tooltip = null;
   if (hoverIndex != null) {
     const row = model.series[hoverIndex];
     const px = model.xAt(hoverIndex);
-    const py = Math.min(model.yClicks(row.clicks || 0), model.yImpr(row.impressions || 0));
+    // Marcador acompanha a CURVA exibida (bruta ou média móvel)
+    const py = Math.min(model.yClicks(model.clicksVals[hoverIndex]), model.yImpr(model.imprVals[hoverIndex]));
+    const tipH = maWindow > 0 ? TIP_H_MA : TIP_H;
     const tipX = px + 10 + TIP_W <= W - 2 ? px + 10 : px - 10 - TIP_W;
-    const tipY = Math.min(Math.max(py - TIP_H - 8, PAD.t), baselineY - TIP_H);
+    const tipY = Math.min(Math.max(py - tipH - 8, PAD.t), baselineY - tipH);
 
-    tooltip = { row, px, py, tipX, tipY };
+    tooltip = { row, px, py, tipX, tipY, tipH, clicksMa: model.clicksVals[hoverIndex] };
   }
 
   return (
-    <svg
+    <>
+      {/* Seletor de média móvel — cadência da linha exibida */}
+      <div className="flex items-center justify-between gap-2 mb-1.5 px-1">
+        <span className="font-serif text-[7.5px] font-bold uppercase tracking-[0.15em] text-[#3d2817] opacity-70">
+          Média móvel
+        </span>
+        <div className="flex gap-1">
+          {MA_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setMaWindow(opt.value)}
+              aria-pressed={maWindow === opt.value}
+              className={`font-serif text-[8px] uppercase tracking-wider px-1.5 py-[1px] border transition-colors ${
+                maWindow === opt.value
+                  ? 'bg-[#8b0000] text-[#fdf6e3] border-[#8b0000]'
+                  : 'bg-[#fdf6e3]/60 text-[#5c4033] border-[#d0c09a] hover:bg-[#d0c09a]/60'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <svg
       ref={svgRef}
       viewBox={`0 0 ${W} ${H}`}
       className="w-full h-auto font-serif select-none"
       onMouseMove={handleMove}
       onMouseLeave={() => setHoverIndex(null)}
       role="img"
-      aria-label="Gráfico de cliques e impressões dia a dia com estatísticas de pico"
+      aria-label={
+        maWindow > 0
+          ? `Gráfico de cliques e impressões com um ponto a cada ${maWindow} dias e estatísticas de pico`
+          : 'Gráfico de cliques e impressões dia a dia com estatísticas de pico'
+      }
     >
       <defs>
         <filter id="growth-tip-shadow" x="-30%" y="-30%" width="160%" height="160%">
@@ -309,7 +393,8 @@ export function GrowthChart({ data, fromDate, toDate }) {
         </text>
       ))}
 
-      {/* Separadores verticais entre os meses + ticks de dia */}
+      {/* Separadores verticais entre os meses + ticks de dia (só nos pontos
+          plotados; marcos de início de mês sempre visíveis) */}
       {model.months.map((m, idx) => {
         if (idx === 0) return null;
         const x = (model.xAt(m.start - 1) + model.xAt(m.start)) / 2;
@@ -329,6 +414,7 @@ export function GrowthChart({ data, fromDate, toDate }) {
       })}
       {model.series.map((row, i) => {
         const isMonthStart = model.months.some((m) => m.start === i);
+        if (!isMonthStart && !model.plotSet.has(i)) return null;
         const x = model.xAt(i);
         return (
           <line
@@ -384,7 +470,7 @@ export function GrowthChart({ data, fromDate, toDate }) {
         opacity="0.8"
       />
 
-      {/* Série: Cliques (tracejado vermelho, vazado) */}
+      {/* Série: Cliques (tracejado vermelho, vazada) */}
       <path
         d={model.clicksPath}
         fill="none"
@@ -394,7 +480,8 @@ export function GrowthChart({ data, fromDate, toDate }) {
         strokeDasharray="6 3.5"
       />
 
-      {/* Crosshair + tooltip no hover (detalhe dia a dia) */}
+      {/* Crosshair + tooltip no hover (encaixa no ponto plotado; valores
+          brutos do dia + valor da média quando ativa) */}
       {tooltip && (
         <g>
           <line
@@ -409,7 +496,7 @@ export function GrowthChart({ data, fromDate, toDate }) {
           />
           <circle
             cx={tooltip.px}
-            cy={model.yImpr(tooltip.row.impressions || 0)}
+            cy={model.yImpr(model.imprVals[hoverIndex])}
             r="3"
             fill="#fdf6e3"
             stroke="#006400"
@@ -417,7 +504,7 @@ export function GrowthChart({ data, fromDate, toDate }) {
           />
           <circle
             cx={tooltip.px}
-            cy={model.yClicks(tooltip.row.clicks || 0)}
+            cy={model.yClicks(model.clicksVals[hoverIndex])}
             r="3.4"
             fill="#fdf6e3"
             stroke="#8b0000"
@@ -428,42 +515,53 @@ export function GrowthChart({ data, fromDate, toDate }) {
               x={tooltip.tipX}
               y={tooltip.tipY}
               width={TIP_W}
-              height={TIP_H}
-              rx="2"
+              height={tooltip.tipH}
+              rx="2.9"
               fill="#fdf6e3"
               stroke="#d0c09a"
             />
             <rect
-              x={tooltip.tipX + 2.5}
-              y={tooltip.tipY + 2.5}
-              width={TIP_W - 5}
-              height={TIP_H - 5}
-              rx="1"
+              x={tooltip.tipX + 3.6}
+              y={tooltip.tipY + 3.6}
+              width={TIP_W - 7.2}
+              height={tooltip.tipH - 7.2}
+              rx="1.5"
               fill="none"
               stroke="#d0c09a"
               opacity="0.6"
             />
           </g>
           <text
-            x={tooltip.tipX + 8}
-            y={tooltip.tipY + 14}
-            fontSize="8"
+            x={tooltip.tipX + 11.6}
+            y={tooltip.tipY + 20.3}
+            fontSize="11.6"
             fontWeight="bold"
             fill="#3d2817"
           >
             {formatDate(tooltip.row.date)}
           </text>
-          <text x={tooltip.tipX + 8} y={tooltip.tipY + 26} fontSize="7.5" fill="#8b0000">
+          <text x={tooltip.tipX + 11.6} y={tooltip.tipY + 37.7} fontSize="10.9" fill="#8b0000">
             {`Cliques: ${tooltip.row.clicks}`}
           </text>
-          <text x={tooltip.tipX + 8} y={tooltip.tipY + 37} fontSize="7.5" fill="#006400">
+          <text x={tooltip.tipX + 11.6} y={tooltip.tipY + 53.7} fontSize="10.9" fill="#006400">
             {`Impressões: ${formatTotal(tooltip.row.impressions || 0)}`}
           </text>
-          <text x={tooltip.tipX + 8} y={tooltip.tipY + 49} fontSize="7" fill="#5c4033">
+          {maWindow > 0 && (
+            <text x={tooltip.tipX + 11.6} y={tooltip.tipY + 69.7} fontSize="10.9" fill="#5c4033">
+              {`Média ${maWindow}d: ${formatDecimal(tooltip.clicksMa.toFixed(1))}`}
+            </text>
+          )}
+          <text
+            x={tooltip.tipX + 11.6}
+            y={tooltip.tipY + (maWindow > 0 ? 87.1 : 71.1)}
+            fontSize="10.2"
+            fill="#5c4033"
+          >
             {`CTR ${formatDecimal(tooltip.row.ctr)} · Pos. ${formatDecimal(tooltip.row.position)}`}
           </text>
         </g>
       )}
     </svg>
+    </>
   );
 }

@@ -1,4 +1,11 @@
 /* Tailwind v4: o theme só é importado via @import "tailwindcss" (não use diretivas @tailwind v3). */
 @import "tailwindcss";
 
+/* Literata (next/font, variável --font-content no <html>): gera a utility
+   `font-literata` para o texto de conteúdo do livro. `inline` embute a var
+   diretamente na regra (padrão recomendado p/ next/font + Tailwind v4). */
+@theme inline {
+  --font-literata: var(--font-content);
+}
+
 body { margin: 0; padding: 0; background: black; overflow: hidden; }

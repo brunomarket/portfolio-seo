@@ -41,6 +41,7 @@ export function Book({ project, position, onSelect, rotation }) {
         <Text
             position={[0, 0, 0.41]} // 0,41 = face frontal (0,4) + folga antiz-fighting
             rotation={[0, 0, -Math.PI / 2]} // leitura de cima para baixo, como lombada real
+            font="/fonts/Cinzel.ttf" // fonte da lombada: Cinzel (serifa clássica romana)
             fontSize={0.15}
             color="white"
             anchorX="center"
