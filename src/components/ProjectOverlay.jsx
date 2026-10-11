@@ -252,7 +252,33 @@ function CapaMobile({ project }) {
   );
 }
 
+// Bloco de estatísticas "Resultados" — reaproveitado pelas páginas mobile.
+// `compacto` reduz números e paddings para caber junto do gráfico (pág. III).
+function ResultadosMobile({ project, compacto = false }) {
+  return (
+    <div className={`border-t-2 border-b-2 border-[#d0c09a] ${compacto ? 'py-2 my-2' : 'py-3 my-3'}`}>
+      <h4 className="text-center text-[9px] font-bold uppercase tracking-widest mb-3 opacity-70">Resultados</h4>
+      <div className="flex justify-around items-stretch gap-2">
+        <div className={`flex-1 relative border border-[#d0c09a] bg-white/20 text-center px-2 ${compacto ? 'py-2' : 'py-3'}`}>
+          <div className="absolute inset-[3px] border border-[#d0c09a] opacity-50 pointer-events-none"></div>
+          <span className={`block font-bold text-[#8b0000] font-serif leading-none mb-2 ${compacto ? 'text-[26px]' : 'text-[32px]'}`}>{project.stats.metricOneValue}</span>
+          <span className="block text-[9px] uppercase font-bold text-[#5c4033] tracking-widest">{project.stats.metricOneLabel}</span>
+        </div>
+        <div className={`flex-1 relative border border-[#d0c09a] bg-white/20 text-center px-2 ${compacto ? 'py-2' : 'py-3'}`}>
+          <div className="absolute inset-[3px] border border-[#d0c09a] opacity-50 pointer-events-none"></div>
+          <span className={`block font-bold text-[#006400] font-serif leading-none mb-2 ${compacto ? 'text-[26px]' : 'text-[32px]'}`}>{project.stats.metricTwoValue}</span>
+          <span className="block text-[9px] uppercase font-bold text-[#5c4033] tracking-widest">{project.stats.metricTwoLabel}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ContextoMobile({ project }) {
+  // Com gráfico (H2bet), os Resultados vão para a página do gráfico (pág. III);
+  // sem gráfico (Seubet), ficam aqui na página do CONTEXTO.
+  const temGrafico = Boolean(project.hasDataTable && project.tableData);
+
   return (
     <>
       <div className="w-full flex justify-center items-center pb-2 opacity-60">
@@ -266,21 +292,7 @@ function ContextoMobile({ project }) {
           {project.description}
         </p>
 
-        <div className="border-t-2 border-b-2 border-[#d0c09a] py-3 my-3">
-          <h4 className="text-center text-[9px] font-bold uppercase tracking-widest mb-3 opacity-70">Resultados</h4>
-          <div className="flex justify-around items-stretch gap-2">
-            <div className="flex-1 relative border border-[#d0c09a] bg-white/20 py-3 px-2 text-center">
-              <div className="absolute inset-[3px] border border-[#d0c09a] opacity-50 pointer-events-none"></div>
-              <span className="block text-[32px] font-bold text-[#8b0000] font-serif leading-none mb-2">{project.stats.metricOneValue}</span>
-              <span className="block text-[9px] uppercase font-bold text-[#5c4033] tracking-widest">{project.stats.metricOneLabel}</span>
-            </div>
-            <div className="flex-1 relative border border-[#d0c09a] bg-white/20 py-3 px-2 text-center">
-              <div className="absolute inset-[3px] border border-[#d0c09a] opacity-50 pointer-events-none"></div>
-              <span className="block text-[32px] font-bold text-[#006400] font-serif leading-none mb-2">{project.stats.metricTwoValue}</span>
-              <span className="block text-[9px] uppercase font-bold text-[#5c4033] tracking-widest">{project.stats.metricTwoLabel}</span>
-            </div>
-          </div>
-        </div>
+        {!temGrafico && <ResultadosMobile project={project} />}
       </div>
     </>
   );
@@ -294,15 +306,21 @@ function GraficoMobile({ project }) {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar text-left pr-1">
-        <h4 className="text-center text-[10px] font-bold uppercase tracking-widest mb-3 opacity-70 text-[#3d2817]">
-          Diário de Crescimento Orgânico
-        </h4>
-        <div className="border border-[#d0c09a] rounded-sm bg-white/20 px-2 py-2">
-          <GrowthChart data={project.tableData} fromDate={project.chartFrom} toDate={project.chartTo} />
+        {/* Estatísticas no topo desta página (pedido: Resultados e gráfico na
+            MESMA página mobile) — versão compacta do bloco */}
+        <ResultadosMobile project={project} compacto />
+
+        <div className="mt-3">
+          <h4 className="text-center text-[10px] font-bold uppercase tracking-widest mb-3 opacity-70 text-[#3d2817]">
+            Diário de Crescimento Orgânico
+          </h4>
+          <div className="border border-[#d0c09a] rounded-sm bg-white/20 px-2 py-2">
+            <GrowthChart data={project.tableData} fromDate={project.chartFrom} toDate={project.chartTo} />
+          </div>
+          <p className="text-center text-[9px] italic opacity-50 font-serif mt-2">
+            Cliques e impressões diárias · Google Search Console
+          </p>
         </div>
-        <p className="text-center text-[9px] italic opacity-50 font-serif mt-2">
-          Cliques e impressões diárias · Google Search Console
-        </p>
       </div>
     </>
   );
